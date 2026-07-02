@@ -1,76 +1,127 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>Piano Accompanist</title>
+  <meta charset="UTF-8" />
+  <title>Piano Accompanist Web MVP</title>
   <style>
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      max-width: 720px;
+      max-width: 900px;
       margin: 40px auto;
       padding: 0 16px;
     }
     h1 {
       margin-bottom: 8px;
     }
+    h2 {
+      margin-top: 32px;
+    }
     .card {
       border: 1px solid #ddd;
       border-radius: 8px;
       padding: 16px;
-      margin-top: 16px;
+      margin-top: 12px;
     }
     button {
       padding: 8px 16px;
       margin-top: 8px;
       cursor: pointer;
     }
+    #osmd-container {
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 8px;
+      margin-top: 12px;
+      min-height: 200px;
+    }
   </style>
-  <!-- MIDI.js CDN -->
+  <!-- MIDI.js CDN: 브라우저에서 MIDI 재생용 -->
   <script src="https://www.midijs.net/lib/midi.js"></script>
+  <!-- OpenSheetMusicDisplay CDN: MusicXML 악보 표시용 -->
+  <script src="https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@1.8.6/build/opensheetmusicdisplay.min.js"></script>
 </head>
 <body>
-  <h1>Piano Accompanist (MVP)</h1>
-  <p>피아노 반주 MIDI 파일을 업로드하면 브라우저에서 바로 재생해 줍니다.</p>
+  <h1>Piano Accompanist Web (MVP)</h1>
+  <p>
+    목표: 1~다수 악보 이미지를 OMR로 인식해서 기타프로처럼 반주를 자동 연주하는 웹앱.
+    지금은 첫 단계로, <strong>MusicXML/MIDI 파일을 직접 업로드해서 피아노 반주를 재생/표시하는 버전</strong>입니다.
+  </p>
 
   <div class="card">
-    <h2>1. 피아노 반주 MIDI 업로드</h2>
-    <input type="file" id="midiFile" accept=".mid,.midi">
-    <p id="fileInfo"></p>
+    <h2>1. MusicXML 업로드 → 악보 표시 (연주 준비)</h2>
+    <p>
+      먼저 외부 OMR/기보 프로그램(예: QuickStave, MuseScore 등)에서 악보 이미지를 MusicXML로 변환한 뒤,
+      여기에서 MusicXML 파일을 업로드하면 브라우저에서 악보를 렌더링합니다.
+    </p>
+    <input type="file" id="musicxmlFile" accept=".xml,.mxl,.musicxml" />
+    <div id="osmd-container"></div>
+  </div>
+
+  <div class="card">
+    <h2>2. 피아노 반주 MIDI 업로드 → 브라우저에서 재생</h2>
+    <p>
+      피아노 반주만 들어있는 MIDI를 업로드하면 바로 브라우저에서 재생할 수 있습니다.
+      (향후에는 위 MusicXML에서 피아노 파트만 추출해서 자동으로 이 영역으로 넘길 예정입니다.)
+    </p>
+    <input type="file" id="midiFile" accept=".mid,.midi" />
+    <p id="midiInfo"></p>
     <button id="playButton" disabled>재생</button>
     <button id="stopButton" disabled>정지</button>
   </div>
 
   <script>
-    const input = document.getElementById('midiFile');
-    const fileInfo = document.getElementById('fileInfo');
+    // === MusicXML 표시 (OpenSheetMusicDisplay) ===
+    const osmdContainer = document.getElementById('osmd-container');
+    const musicxmlInput = document.getElementById('musicxmlFile');
+
+    const osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay(osmdContainer, {
+      autoResize: true,
+    });
+
+    musicxmlInput.addEventListener('change', async () => {
+      const file = musicxmlInput.files[0];
+      if (!file) return;
+
+      const text = await file.text();
+      try {
+        await osmd.load(text);
+        osmd.render();
+      } catch (e) {
+        console.error('MusicXML 로드 오류', e);
+        alert('MusicXML 파일을 불러오는 중 오류가 발생했습니다. 유효한 MusicXML인지 확인해 주세요.');
+      }
+    });
+
+    // === MIDI 재생 (MIDI.js) ===
+    const midiInput = document.getElementById('midiFile');
+    const midiInfo = document.getElementById('midiInfo');
     const playButton = document.getElementById('playButton');
     const stopButton = document.getElementById('stopButton');
 
-    let currentUrl = null;
+    let currentMidiUrl = null;
 
-    input.addEventListener('change', () => {
-      const file = input.files[0];
+    midiInput.addEventListener('change', () => {
+      const file = midiInput.files[0];
       if (!file) return;
 
-      fileInfo.textContent = `선택된 파일: ${file.name}`;
-      if (currentUrl) {
-        URL.revokeObjectURL(currentUrl);
-        currentUrl = null;
+      midiInfo.textContent = `선택된 파일: ${file.name}`;
+      if (currentMidiUrl) {
+        URL.revokeObjectURL(currentMidiUrl);
+        currentMidiUrl = null;
       }
-      currentUrl = URL.createObjectURL(file);
+      currentMidiUrl = URL.createObjectURL(file);
       playButton.disabled = false;
       stopButton.disabled = false;
     });
 
     playButton.addEventListener('click', () => {
-      if (!currentUrl) return;
-      MIDIjs.play(currentUrl);
+      if (!currentMidiUrl) return;
+      MIDIjs.play(currentMidiUrl);
     });
 
     stopButton.addEventListener('click', () => {
       MIDIjs.stop();
     });
-    
   </script>
 </body>
 </html>
