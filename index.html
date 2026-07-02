@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Piano Accompanist</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      max-width: 720px;
+      margin: 40px auto;
+      padding: 0 16px;
+    }
+    h1 {
+      margin-bottom: 8px;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+    button {
+      padding: 8px 16px;
+      margin-top: 8px;
+      cursor: pointer;
+    }
+  </style>
+  <!-- MIDI.js CDN -->
+  <script src="https://www.midijs.net/lib/midi.js"></script>
+</head>
+<body>
+  <h1>Piano Accompanist (MVP)</h1>
+  <p>피아노 반주 MIDI 파일을 업로드하면 브라우저에서 바로 재생해 줍니다.</p>
+
+  <div class="card">
+    <h2>1. 피아노 반주 MIDI 업로드</h2>
+    <input type="file" id="midiFile" accept=".mid,.midi">
+    <p id="fileInfo"></p>
+    <button id="playButton" disabled>재생</button>
+    <button id="stopButton" disabled>정지</button>
+  </div>
+
+  <script>
+    const input = document.getElementById('midiFile');
+    const fileInfo = document.getElementById('fileInfo');
+    const playButton = document.getElementById('playButton');
+    const stopButton = document.getElementById('stopButton');
+
+    let currentUrl = null;
+
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      if (!file) return;
+
+      fileInfo.textContent = `선택된 파일: ${file.name}`;
+      if (currentUrl) {
+        URL.revokeObjectURL(currentUrl);
+        currentUrl = null;
+      }
+      currentUrl = URL.createObjectURL(file);
+      playButton.disabled = false;
+      stopButton.disabled = false;
+    });
+
+    playButton.addEventListener('click', () => {
+      if (!currentUrl) return;
+      MIDIjs.play(currentUrl);
+    });
+
+    stopButton.addEventListener('click', () => {
+      MIDIjs.stop();
+    });
+  </script>
+</body>
+</html>
